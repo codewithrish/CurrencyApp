@@ -33,34 +33,37 @@ import domain.model.CurrencyType
 import ui.theme.primaryColor
 import ui.theme.surfaceColor
 import ui.theme.textColor
-import kotlin.math.sin
 
 @Composable
 fun CurrencyPickerDialog(
     currencies: List<Currency>,
     currencyType: CurrencyType,
-    onPositiveClick: (CurrencyCode) -> Unit,
-    onDismiss: () -> Unit,
+    onConfirmClick: (CurrencyCode) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    val allCurrencies = remember { 
+    val allCurrencies = remember(key1 = currencies) {
         mutableStateListOf<Currency>().apply { addAll(currencies) }
     }
+
     var searchQuery by remember { mutableStateOf("") }
-    val selectedCurrencyCode by remember(currencyType) { mutableStateOf(currencyType.code) }
-    
+    var selectedCurrencyCode by remember(currencyType) {
+        mutableStateOf(currencyType.code)
+    }
+
     AlertDialog(
         containerColor = surfaceColor,
         title = {
             Text(
-                text = "Select currency",
+                text = "Select a currency",
                 color = textColor
             )
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
-            ) { 
+            ) {
                 TextField(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -68,9 +71,10 @@ fun CurrencyPickerDialog(
                     value = searchQuery,
                     onValueChange = { query ->
                         searchQuery = query.uppercase()
+
                         if (query.isNotEmpty()) {
-                            val filteredCurrencies = allCurrencies.filter { currency ->
-                                currency.code.contains(query.uppercase())
+                            val filteredCurrencies = allCurrencies.filter {
+                                it.code.contains(query.uppercase())
                             }
                             allCurrencies.clear()
                             allCurrencies.addAll(filteredCurrencies)
@@ -81,7 +85,7 @@ fun CurrencyPickerDialog(
                     },
                     placeholder = {
                         Text(
-                            text = "Search currency",
+                            text = "Search here",
                             color = textColor.copy(alpha = 0.38f),
                             fontSize = MaterialTheme.typography.bodySmall.fontSize
                         )
@@ -92,33 +96,38 @@ fun CurrencyPickerDialog(
                         fontSize = MaterialTheme.typography.bodySmall.fontSize
                     ),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = textColor.copy(alpha = 0.05f),
-                        unfocusedContainerColor = textColor.copy(alpha = 0.05f),
-                        disabledContainerColor = textColor.copy(alpha = 0.05f),
-                        errorContainerColor = textColor.copy(alpha = 0.05f),
+                        focusedContainerColor = textColor.copy(alpha = 0.1f),
+                        unfocusedContainerColor = textColor.copy(alpha = 0.1f),
+                        disabledContainerColor = textColor.copy(alpha = 0.1f),
+                        errorContainerColor = textColor.copy(alpha = 0.1f),
                         focusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         cursorColor = textColor,
                     )
                 )
+
                 Spacer(modifier = Modifier.height(20.dp))
+
                 AnimatedContent(
-                    targetState = allCurrencies,
+                    targetState = allCurrencies
                 ) { availableCurrencies ->
                     if (availableCurrencies.isNotEmpty()) {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(250.dp),
-
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(
                                 items = availableCurrencies,
                                 key = { it._id.toHexString() }
-                            ) {
-
+                            ) {currency ->
+                                CurrencyCodePickerView(
+                                    code = CurrencyCode.valueOf(currency.code),
+                                    isSelected = selectedCurrencyCode.name == currency.code,
+                                    onSelect = { selectedCurrencyCode = it }
+                                )
                             }
                         }
                     } else {
@@ -137,9 +146,7 @@ fun CurrencyPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onPositiveClick(selectedCurrencyCode)
-            }) {
+            TextButton(onClick = { onConfirmClick(selectedCurrencyCode) }) {
                 Text(
                     text = "Confirm",
                     color = primaryColor

@@ -1,7 +1,7 @@
 package data.remote.api
 
 import domain.CurrencyApiService
-import domain.PreferenceRepository
+import domain.PreferencesRepository
 import domain.model.ApiResponse
 import domain.model.Currency
 import domain.model.CurrencyCode
@@ -17,7 +17,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 class CurrencyApiServiceImpl(
-    private val preferences: PreferenceRepository
+    private val preferences: PreferencesRepository
 ): CurrencyApiService {
     companion object {
         const val END_POINT = "https://api.currencyapi.com/v3/latest"

@@ -42,11 +42,15 @@ import androidx.compose.ui.unit.dp
 import currencyapp.composeapp.generated.resources.Res
 import currencyapp.composeapp.generated.resources.exchange_illustration
 import currencyapp.composeapp.generated.resources.refresh_ic
+import currencyapp.composeapp.generated.resources.switch_ic
 import domain.model.Currency
 import domain.model.CurrencyCode
+import domain.model.CurrencyType
 import domain.model.RateStatus
 import domain.model.RequestState
-import domain.model.RequestState.Loading.DisplayResult
+import domain.model.RequestState.Idle.DisplayResult
+import getPlatform
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import ui.theme.headerColor
 import ui.theme.staleColor
@@ -61,12 +65,14 @@ fun HomeHeader(
     onAmountChange: (Double) -> Unit,
     onRatesRefresh: () -> Unit,
     onSwitchClick: () -> Unit,
+    onCurrencyTypeSelect: (CurrencyType) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
             .background(headerColor)
+            .padding(top = if (getPlatform().name == "Android") 0.dp else 24.dp)
             .padding(all = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -78,7 +84,8 @@ fun HomeHeader(
         CurrencyInputs(
             source = source,
             target = target,
-            onSwitchClick = onSwitchClick
+            onSwitchClick = onSwitchClick,
+            onCurrencyTypeSelect = onCurrencyTypeSelect
         )
         Spacer(modifier = Modifier.height(24.dp))
         AmountInput(
@@ -102,7 +109,7 @@ fun RatesStatus(
             Image(
                 modifier = Modifier.size(50.dp),
                 painter = painterResource(Res.drawable.exchange_illustration),
-                contentDescription = "Exchange Rate illustration"
+                contentDescription = "Exchange Rate Illustration"
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
@@ -135,6 +142,7 @@ fun CurrencyInputs(
     source: RequestState<Currency>,
     target: RequestState<Currency>,
     onSwitchClick: () -> Unit,
+    onCurrencyTypeSelect: (CurrencyType) -> Unit
 ) {
     var animationStarted by remember { mutableStateOf(false) }
     val animatedRotation by animateFloatAsState(
@@ -144,16 +152,27 @@ fun CurrencyInputs(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         CurrencyView(
             placeholder = "from",
             currency = source,
-            onClick = { }
+            onClick = {
+                if (source.isSuccess()) {
+                    onCurrencyTypeSelect(
+                        CurrencyType.Source(
+                            currencyCode = CurrencyCode.valueOf(
+                                source.getSuccessData().code
+                            )
+                        )
+                    )
+                }
+            }
         )
         Spacer(modifier = Modifier.height(14.dp))
         IconButton(
-            modifier = Modifier.padding(top = 24.dp)
+            modifier = Modifier
+                .padding(top = 24.dp)
                 .graphicsLayer {
                     rotationY = animatedRotation
                 },
@@ -163,7 +182,7 @@ fun CurrencyInputs(
             }
         ) {
             Icon(
-                painter = painterResource(Res.drawable.refresh_ic),
+                painter = painterResource(Res.drawable.switch_ic),
                 contentDescription = "Switch Icon",
                 tint = Color.White
             )
@@ -172,7 +191,17 @@ fun CurrencyInputs(
         CurrencyView(
             placeholder = "to",
             currency = target,
-            onClick = { }
+            onClick = {
+                if (target.isSuccess()) {
+                    onCurrencyTypeSelect(
+                        CurrencyType.Target(
+                            currencyCode = CurrencyCode.valueOf(
+                                target.getSuccessData().code
+                            )
+                        )
+                    )
+                }
+            }
         )
     }
 }
@@ -194,7 +223,7 @@ fun RowScope.CurrencyView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(size = 8.dp))
                 .background(Color.White.copy(alpha = 0.05f))
                 .height(54.dp)
                 .clickable { onClick() },
@@ -213,7 +242,7 @@ fun RowScope.CurrencyView(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = CurrencyCode.valueOf(currency.getSuccessData().code).name,
+                        text = CurrencyCode.valueOf(data.code).name,
                         fontWeight = FontWeight.Bold,
                         fontSize = MaterialTheme.typography.titleLarge.fontSize,
                         color = Color.White
@@ -227,15 +256,15 @@ fun RowScope.CurrencyView(
 @Composable
 fun AmountInput(
     amount: Double,
-    onAmountChange: (Double) -> Unit,
+    onAmountChange: (Double) -> Unit
 ) {
     TextField(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(size = 8.dp))
             .animateContentSize()
             .height(54.dp),
-        value = amount.toString(),
+        value = "$amount",
         onValueChange = { onAmountChange(it.toDouble()) },
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.White.copy(alpha = 0.05f),
@@ -245,13 +274,13 @@ fun AmountInput(
             focusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = Color.White,
+            cursorColor = Color.White
         ),
         textStyle = TextStyle(
             color = Color.White,
             fontSize = MaterialTheme.typography.titleLarge.fontSize,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Center
         ),
         singleLine = true,
         keyboardOptions = KeyboardOptions(
